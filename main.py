@@ -17,34 +17,27 @@ root.title("Robot Trajectory")
 canvas = tk.Canvas(root, width=700, height=700)
 canvas.pack()
 
-# Initialize data and colors
+# Initialize variables
+toy_name='SB-9A4B'
 data = []
 colors = ["red", "blue", "green", "orange", "purple"]
-
-# Initialize update_id
 update_id = None
-
-# Initialize the robot position
 robot_position = None
+robot_radius = 15
 
-# Dictionary for mapping direction values to a restricted range
+# Dictionary that maps direction values to a restricted range
 direction_mapping = {i: i if i % 10 == 0 else (i // 10) * 10 for i in range(361)}
 
-
-# Function to draw the trajectory
 def draw_trajectory(data):
-    # Clear the canvas
     canvas.delete("all")
 
-    # Check if data is empty
     if not data:
         return
 
-    # Find the maximum and minimum x and y values
+    # Find max and min x and y values
     x_values = [x for x, y in data]
     y_values = [y for x, y in data]
 
-    # Check if x_values and y_values are empty
     if not x_values or not y_values:
         return
 
@@ -58,10 +51,8 @@ def draw_trajectory(data):
     x_max += padding
     y_max += padding
 
-    # Resize the canvas
+    # Resize and update the canvas
     canvas.config(width=x_max - x_min, height=y_max - y_min)
-
-    # Update the axis range
     canvas.config(scrollregion=(x_min, y_min, x_max, y_max))
 
     # Draw the trajectory
@@ -70,41 +61,34 @@ def draw_trajectory(data):
         x2, y2 = data[i + 1]
         canvas.create_line(x1, y1, x2, y2, fill="black")
 
-    # Draw the robot position as a red dot
+    # Draw the robot as a red dot
     if robot_position:
         x, y = robot_position
-        robot_radius = 15  # Adjust the radius as needed
         canvas.create_oval(scale_factor * (x - x_min) - robot_radius + x_offset,
                            scale_factor * (y - y_min) - robot_radius + y_offset,
                            scale_factor * (x - x_min) + robot_radius + x_offset,
                            scale_factor * (y - y_min) + robot_radius + y_offset, fill="red")
 
-
-# Function to update the data and redraw the trajectory
 def update():
     draw_trajectory(data)
 
-
-# Function to stop updating
+# stop updating
 def stop():
     global update_id
     root.after_cancel(update_id)
-
-
-# Function to start updating
+    
+# start updating 
 def start():
     global update_id, rep, duration, data
-    data.clear()  # Clear the data when starting a new trajectory
-    rep = int(rep_entry.get())  # Get the repetition value from the entry field
-    duration = int(duration_entry.get())  # Get the duration value from the entry field
-    update_id = root.after(0, update)  # Start the update immediately
-    thread = Thread(target=execute_trajectory)  # Create a new thread for robot movement
+    data.clear()
+    rep = int(rep_entry.get())
+    duration = int(duration_entry.get())
+    update_id = root.after(0, update)
+    thread = Thread(target=execute_trajectory)
     thread.start()
 
-
-# Function to execute the robot trajectory
 def execute_trajectory():
-    toy = scanner.find_toy(toy_name='SB-9A4B')
+    toy = scanner.find_toy(toy_name)
     with SpheroEduAPI(toy) as droid:
         droid.set_stabilization(False)
         droid.set_main_led(Color(r=0, g=0, b=255))
@@ -115,39 +99,39 @@ def execute_trajectory():
                 direction = randint(0, 360)
                 restricted_direction = direction_mapping[direction]
                 droid.set_heading(restricted_direction)
-                # Get the robot's location
+                
                 location = droid.get_location()
                 x = location['x']
                 y = location['y']
                 robot_position = (x, y)
                 data.append(robot_position)
-                time.sleep(0.3)  # Adjust the delay between coordinate updates if needed
+                time.sleep(0.3)  # delay between coordinate updates
                 droid.set_speed(0)
-                root.update()  # Update the UI during robot movement
-            draw_trajectory(data)  # Draw the trajectory after each repetition
-        root.update()  # Update the UI after all repetitions
+                root.update()  # update the UI
+            draw_trajectory(data)
+        root.update()
 
 
 def save_graph():
-    # Données de trajectoire
+    # Trajectory data
     x_data = [point[0] for point in data]
     y_data = [point[1] for point in data]
 
-    # Créer le graphique
+    # Create the graph
     plt.plot(x_data, y_data, color='black')
     plt.scatter(x_data[-1], y_data[-1], color='red')
 
-    # Personnaliser les limites du graphe
+    # Defines its limits
     padding = 10
     x_min, x_max = min(x_data) - padding, max(x_data) + padding
     y_min, y_max = min(y_data) - padding, max(y_data) + padding
     plt.xlim(x_min, x_max)
     plt.ylim(y_min, y_max)
 
-    # Enregistrer le graphe sous forme d'image
     plt.savefig('graph.png')
-    """TRANSFORMER LE GRAPH VIA CONVOLUTIONS"""
-    # Afficher le graphe
+    
+    # TODO: TRANSFORMER LE GRAPH VIA CONVOLUTIONS
+    
     plt.show()
 
 
@@ -162,11 +146,10 @@ duration_label.pack()
 duration_entry = tk.Entry(root)
 duration_entry.pack()
 
-# Create start button
+# Create buttons
 start_button = tk.Button(root, text="Start", command=start)
 start_button.pack()
 
-# Create save button
 save_button = tk.Button(root, text="Enregistrer", command=save_graph)
 save_button.pack()
 
